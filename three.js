@@ -5,7 +5,7 @@ import * as THREE from './node_modules/three/build/three.module.js';
 
 //render a floor
 
-var scene, camera, renderer, mesh;
+var scene, camera, renderer, mesh, mouse, raycaster, INTERSECTED, canvas, gl, program, points;
 var meshFloor, ambientLight, light;
 
 var keyboard = {};
@@ -44,10 +44,14 @@ function interact(){
 	}
 }
 
-
 function init(){
+	
+
 	scene = new THREE.Scene();
 	camera = new THREE.PerspectiveCamera(90, 1280/720, 0.1, 1000);
+
+	document.addEventListener('mousedown', onDocumentMouseDown, false);
+    document.addEventListener('mousemove', onDocumentMouseMove, false);  
 	
 	//renderer.setSize( window.innerWidth, window.innerHeight );
 	
@@ -99,7 +103,51 @@ function init(){
 	document.body.appendChild(renderer.domElement);
 	
 	animate();
-	interact();	
+	interact();		
+	objectClick();
+}
+
+function onDocumentMouseDown(event) {
+
+	var vector = new THREE.Vector3((event.clientX / window.innerWidth) * 2 - 1, -(event.clientY / window.innerHeight) * 2 + 1, 0.5);
+	vector = vector.unproject(camera);
+
+	var raycaster = new THREE.Raycaster(camera.position, vector.sub(camera.position).normalize());
+	var intersects = raycaster.intersectObjects([mesh]);
+
+	if (intersects.length > 0) {
+		console.log(intersects[0]);
+		intersects[0].object.material.transparent = true;
+		intersects[0].object.material.opacity = 0.1;
+	}
+}
+
+function onDocumentMouseMove(event) {
+	if (controls.showRay) {
+		var vector = new THREE.Vector3((event.clientX / window.innerWidth) * 2 - 1, -(event.clientY / window.innerHeight) * 2 + 1, 0.5);
+		vector = vector.unproject(camera);
+
+		var raycaster = new THREE.Raycaster(camera.position, vector.sub(camera.position).normalize());
+		var intersects = raycaster.intersectObjects([mesh]);
+
+		if (intersects.length > 0) {
+
+			var points = [];
+			points.push(new THREE.Vector3(-30, 39.8, 30));
+			points.push(intersects[0].point);
+
+			var mat = new THREE.MeshBasicMaterial({color: 0xff0000, transparent: true, opacity: 0.6});
+			var tubeGeometry = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(points), 60, 0.001);
+
+			if (tube) 
+				scene.remove(tube);
+			
+			if (controls.showRay) {
+				tube = new THREE.Mesh(tubeGeometry, mat);
+				scene.add(tube);
+			}
+		}	
+	}
 }
 
 function animate(){
@@ -135,7 +183,7 @@ function animate(){
 	renderer.render(scene, camera);
 }
 
-function mouseMove(event){
+/* function mouseMove(event){
 	var movementX = event.movementX ||
 					event.mozMovementX          ||
 					event.webkitMovementX       ||
@@ -148,7 +196,11 @@ function mouseMove(event){
 	camera.rotation.y -= movementX * 0.002;
 	camera.rotation.x -= movementY * 0.002;
 	camera.rotation.x = Math.clamp(camera.rotation.x, -Math.PI/2, Math.PI/2);
-}
+} */
+
+
+//select object on mouse click getBounding
+
 
 function keyDown(event){
 	keyboard[event.keyCode] = true;
@@ -158,9 +210,8 @@ function keyUp(event){
 	keyboard[event.keyCode] = false;
 }
 
-
 window.addEventListener('keydown', keyDown);
 window.addEventListener('keyup', keyUp);
-window.addEventListener('mousemove', mouseMove);
+//window.addEventListener('mousemove', mouseMove);
 	
 window.onload = init;
